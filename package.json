@@ -12,5 +12,13 @@
   "type": "commonjs",
   "dependencies": {
     "express": "^5.1.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Apsarathapa/quora-backend.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Apsarathapa/quora-backend/issues"
+  },
+  "homepage": "https://github.com/Apsarathapa/quora-backend#readme"
 }
