@@ -1,17 +1,38 @@
-const express = require('express');
+console.log('This is the REAL index.js being run');
 const mongoose = require('mongoose');
+const express = require('express');
+const cors = require('cors');
 const app = express();
 const PORT = 3000;
-const Question = require('./models/questions.js');
-console.log('Question:', Question);
+app.use(cors({ //Allow frontend to talk to backend
+  origin: [
+    'http://127.0.0.1:5500',
+    'http://localhost:5500',
+    'null' // for file:// protocol if needed
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type'],
+  credentials: true
+}));
+
+app.use(express.json()); // Needed to parse JSON body
 
 
-app.use(express.json());
+app.get('/ping', (req, res) => {
+  res.send('Server is alive!');
+});
+
 
 // Connect to MongoDB
 mongoose.connect('mongodb://127.0.0.1:27017/mydatabase')
   .then(() => console.log('MongoDB Connected'))
   .catch(err => console.error('MongoDB error:', err));
+
+
+const Question = require('./models/questions.js');
+const questionRoutes = require('./routes/questions')
+console.log('Question:', Question);
+app.use('/questions', questionRoutes);
 
 
 //Adding search routes in Express
@@ -52,14 +73,9 @@ app.get('/services', (req, res) => {
 });
 
 
-app.get('/', (req, res) => {
-  res.send('Quora Backend Home');
-});
-
 app.get('/searchtest', (req, res) => {
   res.send('Search test route works!');
 });
-
 
 
 // Start the server
@@ -70,13 +86,13 @@ app.listen(PORT, () => {
 
 
 
-// // Sample POST route for testing
-// app.post('/questions', async (req, res) => {
-//   try {
-//     const question = new Question(req.body);
-//     const saved = await question.save();
-//     res.status(201).json(saved);
-//   } catch (e) {
-//     res.status(400).json({ message: e.message });
-//   }
-// });
+// // //xx Sample POST route for testing
+// // app.post('/questions', async (req, res) => {
+// //   try {
+// //     const question = new Question(req.body);
+// //     const saved = await question.save();
+// //     res.status(201).json(saved);
+// //   } catch (e) {
+// //     res.status(400).json({ message: e.message });
+// //   }
+// // });
