@@ -11,17 +11,15 @@ const questionSchema = new mongoose.Schema({
     required: true // Question must have a description/body
   },
   author: {
-    type: String,        // Single string, not array
-    required: true       //  Make it required
+    type: String, // Single string, not array
+    required: true // Make it required
   },
-  tags: {                // ADDED: Separate field for tags
-    type: [String],      // Array of tags like ['JavaScript', 'Node.js']
+  tags: { // ADDED: Separate field for tags
+    type: [String], // Array of tags like ['JavaScript', 'Node.js']
     default: []
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now    // Automatically adds the current date/time
   }
+}, { 
+  timestamps: true  // ← Schema options go here
 });
 
 // Export the model
