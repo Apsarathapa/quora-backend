@@ -1,18 +1,22 @@
 console.log('This is the REAL index.js being run');
 const mongoose = require('mongoose');
+console.log(' MONGODB_URI from environment:', process.env.MONGODB_URI);
+console.log('Full connection string being used:', process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/mydatabase');
 const express = require('express');
 const cors = require('cors');
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000; // instead of const PORT = 3000; process.env.PORT assigns the port dynamically
+console.log('PORT from environment:', process.env.PORT);
+console.log('Using PORT:', PORT);
 app.use(cors({ //Allow frontend to talk to backend
   origin: [
     'http://127.0.0.1:5500',
     'http://localhost:5500',
-    'http://localhost:3007',
+    'http://localhost:3000',
     'http://localhost:3001',
     'http://localhost:3009',
     'http://localhost:60200',
-    'http://localhost:57277',
+    'http://localhost:50931',
     'null' // for file:// protocol if needed
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -30,7 +34,7 @@ app.get('/ping', (req, res) => {
 
 
 // Connect to MongoDB
-mongoose.connect('mongodb://127.0.0.1:27017/mydatabase')
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/mydatabase')
   .then(() => console.log('MongoDB Connected'))
   .catch(err => console.error('MongoDB error:', err));
 
@@ -211,6 +215,38 @@ app.put('/question/:id', async (req, res) => {
     
     // GENERIC SERVER ERROR: Database connection issues, etc.
     res.status(500).json({ error: "Server error while updating question" });
+  }
+});
+
+// GET route for fetching individual question by ID
+app.get('/question/:id', async (req, res) => {
+  console.log('📖 GET route hit for question ID:', req.params.id);
+  
+  try {
+    const questionId = req.params.id;
+    
+    // Find question by ID
+    const question = await Question.findById(questionId);
+    
+    // Check if question exists
+    if (!question) {
+      return res.status(404).json({ error: "Question not found" });
+    }
+    
+    // Return the question data
+    console.log('✅ Question found:', question.title);
+    res.json(question);
+    
+  } catch (e) {
+    console.error('❌ GET question error:', e);
+    
+    // Invalid ID format
+    if (e.name === 'CastError') {
+      return res.status(400).json({ error: "Invalid question ID format" });
+    }
+    
+    // Server error
+    res.status(500).json({ error: "Server error while fetching question" });
   }
 });
 
