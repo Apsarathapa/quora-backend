@@ -8,6 +8,11 @@ app.use(cors({ //Allow frontend to talk to backend
   origin: [
     'http://127.0.0.1:5500',
     'http://localhost:5500',
+    'http://localhost:3007',
+    'http://localhost:3001',
+    'http://localhost:3009',
+    'http://localhost:60200',
+    'http://localhost:57277',
     'null' // for file:// protocol if needed
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -70,54 +75,107 @@ app.get('/search', async (req, res) => {
 });
 
 // PUT route for updating questions
+// app.put('/question/:id', async (req, res) => {
+//   // Log incoming request for debugging - helps track what requests are being made
+//   console.log('🔄 PUT route hit with ID:', req.params.id);
+//   console.log('📝 Update data:', req.body);
+  
+//   try {
+//     const questionId = req.params.id; // Extract ID from URL parameter
+//     const { title, detail, author } = req.body; // Destructure expected fields from request body
+    
+//     // VALIDATION: Check if required fields are present
+//     // This prevents updating with empty/missing data
+//     if (!title || !detail || !author) {
+//       return res.status(400).json({ 
+//         error: "Title, detail, and author are required" 
+//       });
+//     }
+    
+//     // VALIDATION: Check field lengths using same rules as your POST routes
+//     // Ensures data quality and consistency across your app
+//     if (title.trim().length < 5) {
+//       return res.status(400).json({ 
+//         error: "Title must be at least 5 characters" 
+//       });
+//     }
+    
+//     if (detail.trim().length < 10) {
+//       return res.status(400).json({ 
+//         error: "Detail must be at least 10 characters" 
+//       });
+//     }
+    
+//     if (author.trim().length < 2) {
+//       return res.status(400).json({ 
+//         error: "Author must be at least 2 characters" 
+//       });
+//     }
+
+app.post('/questions/ask', async (req, res) => {
+  console.log('POST /ask hit');
+  console.log('Request body:', req.body);
+  
+  const { title, detail, author, category, tags, email, anonymous } = req.body;
+  
+  try {
+    const validationError = validateQuestion({ title, detail, author });
+    
+    if (validationError) {
+      console.log('Validation failed:', validationError);
+      return res.status(400).json({ error: validationError });
+    }
+    
+    console.log('Creating question...');
+    
+    // Convert tags string to array if provided
+    const tagsArray = tags ? tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+    
+    const question = new Question({ 
+      title, 
+      detail, 
+      author: anonymous ? 'Anonymous' : author,
+      category,
+      tags: tagsArray
+    });
+    
+    const savedQuestion = await question.save();
+    console.log('Question saved successfully');
+    
+    res.status(201).json({ message: 'Question submitted successfully!', question: savedQuestion });
+  } catch (err) {
+    console.error('Error saving question:', err.message);
+    res.status(500).json({ error: 'Server error. Please try again later.' });
+  }
+});
+    
+// PUT route for updating questions
 app.put('/question/:id', async (req, res) => {
-  // Log incoming request for debugging - helps track what requests are being made
   console.log('🔄 PUT route hit with ID:', req.params.id);
   console.log('📝 Update data:', req.body);
   
   try {
-    const questionId = req.params.id; // Extract ID from URL parameter
-    const { title, detail, author } = req.body; // Destructure expected fields from request body
+    const questionId = req.params.id;
+    const { title, detail, author } = req.body;
     
-    // VALIDATION: Check if required fields are present
-    // This prevents updating with empty/missing data
+    // Validate required fields
     if (!title || !detail || !author) {
       return res.status(400).json({ 
         error: "Title, detail, and author are required" 
       });
     }
     
-    // VALIDATION: Check field lengths using same rules as your POST routes
-    // Ensures data quality and consistency across your app
-    if (title.trim().length < 5) {
-      return res.status(400).json({ 
-        error: "Title must be at least 5 characters" 
-      });
-    }
-    
-    if (detail.trim().length < 10) {
-      return res.status(400).json({ 
-        error: "Detail must be at least 10 characters" 
-      });
-    }
-    
-    if (author.trim().length < 2) {
-      return res.status(400).json({ 
-        error: "Author must be at least 2 characters" 
-      });
-    }
-    
     // UPDATE OPERATION: Use findByIdAndUpdate to modify the document
     const updatedQuestion = await Question.findByIdAndUpdate(
       questionId, // Which document to update (by ID)
-      { 
+      {
         // What fields to update - trim() removes extra whitespace
-        title: title.trim(), 
-        detail: detail.trim(), 
+        title: title.trim(),
+        detail: detail.trim(),
         author: author.trim(),
         updatedAt: new Date() // Add timestamp for when it was last modified
       },
-      { 
+      {
         new: true, // Return the UPDATED document (not the old one)
         runValidators: true // Run mongoose schema validators during update
       }
@@ -130,9 +188,9 @@ app.put('/question/:id', async (req, res) => {
     
     // SUCCESS: Log and return the updated question
     console.log('✅ Question updated successfully:', updatedQuestion.title);
-    res.json({ 
-      message: "Question updated successfully!", 
-      question: updatedQuestion 
+    res.json({
+      message: "Question updated successfully!",
+      question: updatedQuestion
     });
     
   } catch (e) {
@@ -141,7 +199,7 @@ app.put('/question/:id', async (req, res) => {
     
     // MONGOOSE VALIDATION ERROR: Schema-level validation failed
     if (e.name === 'ValidationError') {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: "Validation failed: " + Object.values(e.errors).map(err => err.message).join(', ')
       });
     }
@@ -155,58 +213,6 @@ app.put('/question/:id', async (req, res) => {
     res.status(500).json({ error: "Server error while updating question" });
   }
 });
-
-// FUNCTION: Delete a question with confirmation
-// Handles the delete button click with user confirmation
-async function deleteQuestion(questionId) {
-  // CONFIRMATION: Ask user to confirm before deleting
-  // This prevents accidental deletions
-  const confirmed = confirm("Are you sure you want to delete this question? This action cannot be undone.");
-  
-  if (!confirmed) {
-    // User clicked "Cancel" - do nothing
-    return;
-  }
-  
-  try {
-    // LOADING STATE: Show user that deletion is in progress
-    const deleteBtn = event.target;
-    const originalText = deleteBtn.textContent;
-    deleteBtn.textContent = "Deleting...";
-    deleteBtn.disabled = true;
-    
-    // API CALL: Send DELETE request to backend
-    const response = await fetch(`http://localhost:3000/question/${questionId}`, {
-      method: 'DELETE'
-    });
-    
-    const data = await response.json();
-    
-    if (response.ok) {
-      // SUCCESS: Question was deleted successfully
-      alert("Question deleted successfully!");
-      
-      // RELOAD: Refresh the questions list to show updated data
-      loadRealQuestions();
-    } else {
-      // ERROR: Backend returned an error
-      alert(`Error deleting question: ${data.error}`);
-      
-      // Restore button state
-      deleteBtn.textContent = originalText;
-      deleteBtn.disabled = false;
-    }
-  } catch (error) {
-    // NETWORK ERROR: Could not reach the server
-    console.error('Error deleting question:', error);
-    alert('Network error: Unable to delete question');
-    
-    // Restore button state
-    const deleteBtn = event.target;
-    deleteBtn.textContent = "🗑️ Delete";
-    deleteBtn.disabled = false;
-  }
-}
 
 // Route: POST /submit (example route for form submissions)
 app.post('/submit', (req, res) => {

@@ -14,6 +14,7 @@ const questionSchema = new mongoose.Schema({
     type: String, // Single string, not array
     required: true // Make it required
   },
+  category: { type: String },  // NEW
   tags: { // ADDED: Separate field for tags
     type: [String], // Array of tags like ['JavaScript', 'Node.js']
     default: []
